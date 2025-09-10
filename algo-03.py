@@ -129,18 +129,20 @@ def algo_03_decision(
         person_attributes = next_person.get("attributes", {})
         # We iterate over all subsets with acceptance rate > 0, and check if the person has all attributes in the subset,
         # Note that subsets are numbers but person_attributes is an dict with string keys like "underground_veteran"
+        # Map attributes to indices
+        attr_names = ["underground_veteran", "international", "fashion_forward",
+                      "queer_friendly", "vinyl_collector", "german_speaker"]
+
+        # Set of indices for attributes the person actually has
+        person_indices = {i for i, name in enumerate(
+            attr_names) if person_attributes.get(name, False)}
+
+        # Now check if subset is fully contained in person_indices
         for idx, subset in enumerate(all_subsets):
             if acceptance_rates[idx] > 0.33:
-                has_all = True
-                for i in subset:
-                    attr_name = ["underground_veteran", "international", "fashion_forward",
-                                 "queer_friendly", "vinyl_collector", "german_speaker"][i]
-                    if not person_attributes.get(attr_name, False):
-                        has_all = False
-                        break
-                if has_all:
+                if set(subset).issubset(person_indices):
                     print(
-                        f"Person has all attributes in subset {subset}")
+                        f"Person accepted because of {subset} beeing a subset of {person_indices}")
                     return True
 
         return False
