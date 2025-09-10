@@ -3,7 +3,7 @@ name: Run algo-02 script
 
 on:
   schedule:
-    - cron: "*/5 * * * *" # alle 2 Minuten
+    - cron: "* * * * *" # alle 2 Minuten
   workflow_dispatch: # erlaubt manuelles Triggern
 
 jobs:
