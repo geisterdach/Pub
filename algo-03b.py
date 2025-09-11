@@ -65,6 +65,56 @@ def solve_minimax(goal):
     return res
 
 
+def prognose_outcome(
+    constraints: List[Dict[str, Any]],
+    admitted_count: int,
+    rejected_count: int,
+    accepted_count: Dict[str, int],
+    next_person: Dict[str, Any],
+    assume_accept: bool
+) -> float:
+    remaining_spots = 1000 - admitted_count
+
+    # Copy accepted_count so we don’t mutate original
+    accepted = dict(accepted_count)
+
+    # If we assume the person is accepted, update counts
+    if assume_accept:
+        for attr, has_it in next_person.get("attributes", {}).items():
+            if has_it:
+                accepted[attr] = accepted.get(attr, 0) + 1
+        admitted_count += 1
+        remaining_spots -= 1
+    else:
+        rejected_count -= 1
+
+    # Calculate goal vector
+    goal_map = {
+        c["attribute"]: max(
+            0.0, (c["minCount"] - accepted.get(c["attribute"], 0)) / max(0.1, remaining_spots))
+        for c in constraints
+    }
+
+    goal = np.array([
+        0.0,  # underground_veteran forced to 0
+        goal_map.get("international", 0.0),
+        0.0,  # fashion_forward forced to 0
+        goal_map.get("queer_friendly", 0.0),
+        goal_map.get("vinyl_collector", 0.0),
+        goal_map.get("german_speaker", 0.0),
+    ])
+
+    # Solve LP
+    res = solve_minimax(goal)
+
+    if not res.success:
+        return float("inf")
+
+    t = res.x[-1]
+    prognose = rejected_count + remaining_spots * (t - 1)
+    return prognose
+
+
 def algo_03_decision(
     constraints: List[Dict[str, Any]],
     attribute_statistics: Dict[str, Any],
@@ -74,89 +124,21 @@ def algo_03_decision(
     next_person: Dict[str, Any],
     accepted_count: Dict[str, int]
 ) -> bool:
-    remaining_spots = 1000 - admitted_count
+    # Prognosis if we reject the person
+    prognose_reject = prognose_outcome(
+        constraints, admitted_count, rejected_count, accepted_count, next_person, assume_accept=False
+    )
 
-    # Calculate values for each constraint attribute
-    values = {}
-    for constraint in constraints:
-        attr_id = constraint["attribute"]
-        min_count = constraint["minCount"]
-        current_accepted = accepted_count.get(attr_id, 0)
-        remaining_needed = min_count - current_accepted
+    # Prognosis if we accept the person
+    prognose_accept = prognose_outcome(
+        constraints, admitted_count, rejected_count, accepted_count, next_person, assume_accept=True
+    )
 
-        if remaining_needed <= 0:
-            values[attr_id] = 0.0
-        else:
-            values[attr_id] = remaining_needed / remaining_spots
+    print("")
+    print("Prognose (reject):", np.round(prognose_reject, 1))
+    print("Prognose (accept):", np.round(prognose_accept, 1))
 
-    # define the vector v
-    goal = np.array([values.get("underground_veteran", 0.0), values.get("international", 0.0),
-                     values.get("fashion_forward", 0.0), values.get(
-                         "queer_friendly", 0.0),
-                     values.get("vinyl_collector", 0.0), values.get("german_speaker", 0.0)])
-    # To make it solvable, we let underground_veteran and fashion_forward be 0
-    goal = np.array([0.0, goal[1], 0.0, goal[3], goal[4], goal[5]])
-    res = solve_minimax(goal)
-
-    if res.success:
-        v = res.x[:-1]
-        t = res.x[-1]
-
-        acceptance_rates = 1/coeffs_subsets / t * v
-
-        print("\nSample of nonzero v-subsets:")
-        for idx, subset in enumerate(all_subsets):
-            if v[idx] > 1e-6:
-                print(
-                    f"Subset {subset}: v = {v[idx]:.3f}, A = {acceptance_rates[idx]:.3f}")
-
-        print("\nSample of nonzero v-subsets with A between 0 and 1")
-        for idx, subset in enumerate(all_subsets):
-            if v[idx] > 1e-6 and acceptance_rates[idx] > 0 and acceptance_rates[idx] < 0.99:
-                print(
-                    f"Subset {subset}: v = {v[idx]:.3f}, A = {acceptance_rates[idx]:.3f}")
-
-        print("\nOptimal t (minimized max):", np.round(t, 3))
-        print("M_subsets @ v:", np.round(M_subsets @ v, 3))
-        print("Goal:", np.round(goal, 3))
-
-        prognose = rejected_count + remaining_spots * (t - 1)
-        print("Prognose admitted after all:", np.round(prognose, 1))
-
-        # An indices combination with 1/coeff * v_subset >= t - epsilon is called limiting factor
-        # Print all limiting factors
-        # print("\nLimiting factors (coeff * v_subset >= t - epsilon):")
-        # for idx, coeff in enumerate(coeffs_subsets):
-        #     if 1/coeff * v[idx] >= t - 1e-6:
-        #         print(
-        #             f"Subset {all_subsets[idx]}: coeff = {coeff:.6f}, v = {v[idx]:.6f}")
-
-        # For a person define the property Matrix which is 6x6 with 1 if person has both attributes i and j
-        person_attributes = next_person.get("attributes", {})
-        # We iterate over all subsets with acceptance rate > 0, and check if the person has all attributes in the subset,
-        # Note that subsets are numbers but person_attributes is an dict with string keys like "underground_veteran"
-        # Map attributes to indices
-        attr_names = ["underground_veteran", "international", "fashion_forward",
-                      "queer_friendly", "vinyl_collector", "german_speaker"]
-
-        # Set of indices for attributes the person actually has
-        person_indices = {i for i, name in enumerate(
-            attr_names) if person_attributes.get(name, False)}
-
-        # Now check if subset is fully contained in person_indices
-        for idx, subset in enumerate(all_subsets):
-            if acceptance_rates[idx] > 0.33:
-                if set(subset).issubset(person_indices):
-                    print(
-                        f"Person accepted because of {subset} beeing a subset of {person_indices}")
-                    return True
-
-        return False
-
-    else:
-        print("No feasible solution found.")
-        print("Goal:", goal)
-        return True
+    return prognose_accept < prognose_reject
 
 
 if __name__ == "__main__":
