@@ -10,6 +10,8 @@ data = {(): 0.013271228207549342, (0,): 0.006759402132608646, (1,): 0.0163457773
 
 # Features
 n_features = 6
+feature_names = ["underground_veteran", "international", "fashion_forward",
+                 "queer_friendly", "vinyl_collector", "german_speaker"]
 
 # ---- ALL SUBSETS ----
 all_subsets = []
@@ -90,10 +92,7 @@ def algo_03_decision(
             values[attr_id] = remaining_needed / remaining_spots
 
     # define the vector v
-    goal = np.array([values.get("underground_veteran", 0.0), values.get("international", 0.0),
-                     values.get("fashion_forward", 0.0), values.get(
-                         "queer_friendly", 0.0),
-                     values.get("vinyl_collector", 0.0), values.get("german_speaker", 0.0)])
+    goal = np.array([values.get(name, 0.0) for name in feature_names])
     # To make it solvable, we let underground_veteran and fashion_forward be 0
     goal = np.array([0.0, goal[1], 0.0, goal[3], goal[4], goal[5]])
     res = solve_minimax(goal)
@@ -136,22 +135,18 @@ def algo_03_decision(
         # We iterate over all subsets with acceptance rate > 0, and check if the person has all attributes in the subset,
         # Note that subsets are numbers but person_attributes is an dict with string keys like "underground_veteran"
         # Map attributes to indices
-        attr_names = ["underground_veteran", "international", "fashion_forward",
-                      "queer_friendly", "vinyl_collector", "german_speaker"]
 
         # Set of indices for attributes the person actually has
         person_indices = {i for i, name in enumerate(
-            attr_names) if person_attributes.get(name, False)}
-
+            feature_names) if person_attributes.get(name, False)}
+        acceptance_sum = 0.0
         # Now check if subset is fully contained in person_indices
         for idx, subset in enumerate(all_subsets):
-            if acceptance_rates[idx] > 0.33:
-                if set(subset).issubset(person_indices):
-                    print(
-                        f"Person accepted because of {subset} beeing a subset of {person_indices}")
-                    return True
+            if set(subset).issubset(person_indices):
+                acceptance_sum += acceptance_rates[idx]
 
-        return False
+        print("acceptance_sum", np.round(acceptance_sum, 1))
+        return acceptance_sum > 0.5
 
     else:
         print("No feasible solution found.")

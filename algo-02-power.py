@@ -6,7 +6,8 @@ from base import run_algorithm
 
 # ---- Empirical data (Scenario 2) ----
 # Hier musst du die Daten aus analyse-data.py für Scenario 2 einsetzen
-data = {(): 0.032898891292870526, (0,): 0.4199577635379248, (1,): 0.033209453514011535, (2,): 0.0011594322922597543, (3,): 0.04844253046097786, (0, 1): 0.09591714199939957, (0, 2): 0.005833393720431889, (0, 3): 0.013809666766736716, (1, 2): 0.0025983705835464135, (1, 3): 0.2474404496940962, (2, 3): 0.0017184442903135644, (0, 1, 2): 0.010797213221668961, (0, 1, 3): 0.047034648391805295, (0, 2, 3): 0.006765080383854905, (1, 2, 3): 0.00647004627377095, (0, 1, 2, 3): 0.025947473576331016}
+data = {(): 0.032898891292870526, (0,): 0.4199577635379248, (1,): 0.033209453514011535, (2,): 0.0011594322922597543, (3,): 0.04844253046097786, (0, 1): 0.09591714199939957, (0, 2): 0.005833393720431889, (0, 3): 0.013809666766736716, (1, 2)
+         : 0.0025983705835464135, (1, 3): 0.2474404496940962, (2, 3): 0.0017184442903135644, (0, 1, 2): 0.010797213221668961, (0, 1, 3): 0.047034648391805295, (0, 2, 3): 0.006765080383854905, (1, 2, 3): 0.00647004627377095, (0, 1, 2, 3): 0.025947473576331016}
 
 # Features
 n_features = 4
@@ -117,19 +118,18 @@ def algo_02_decision(
 
         # Check person attributes
         person_attributes = next_person.get("attributes", {})
+        print("Person attributes: ", person_attributes)
+        # Set of indices for attributes the person actually has
+        person_indices = {i for i, name in enumerate(
+            feature_names) if person_attributes.get(name, False)}
+        acceptance_sum = 0.0
+        # Now check if subset is fully contained in person_indices
         for idx, subset in enumerate(all_subsets):
-            if acceptance_rates[idx] > 0.33:
-                has_all = True
-                for i in subset:
-                    attr_name = feature_names[i]
-                    if not person_attributes.get(attr_name, False):
-                        has_all = False
-                        break
-                if has_all:
-                    print(f"Person has all attributes in subset {subset}")
-                    return True
+            if set(subset).issubset(person_indices):
+                acceptance_sum += acceptance_rates[idx]
 
-        return False
+        print("acceptance_sum", np.round(acceptance_sum, 1))
+        return acceptance_sum > 0.5
 
     else:
         print("No feasible solution found.")
