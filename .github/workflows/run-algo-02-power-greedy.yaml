@@ -1,5 +1,5 @@
 # .github/workflows/run-script.yml
-name: Run algo-02-power script copy
+name: Run algo-02-power-greedy script
 
 on:
   schedule:
@@ -25,4 +25,4 @@ jobs:
 
       - name: Run script
         run: |
-          python algo-02-power.py
+          python algo-02-power-greedy.py
