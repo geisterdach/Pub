@@ -146,7 +146,7 @@ def algo_03_decision(
                 acceptance_sum += acceptance_rates[idx]
 
         print("acceptance_sum", np.round(acceptance_sum, 1))
-        return acceptance_sum > 0.5
+        return acceptance_sum > 0.2
 
     else:
         print("No feasible solution found.")
