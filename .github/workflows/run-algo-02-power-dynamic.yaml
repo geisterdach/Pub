@@ -1,9 +1,9 @@
 # .github/workflows/run-script.yml
-name: Run algo-01 script
+name: Run algo-02-power-dynamic script
 
 on:
   schedule:
-    - cron: "0 * * * *" # alle 2 Minuten
+    - cron: "* * * * *" # alle 2 Minuten
   workflow_dispatch: # erlaubt manuelles Triggern
 
 jobs:
@@ -25,4 +25,4 @@ jobs:
 
       - name: Run script
         run: |
-          python algo-01.py
+          python algo-02-power-dynamic.py
